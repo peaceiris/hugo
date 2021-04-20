@@ -21,9 +21,12 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/gohugoio/hugo/common/text"
 
@@ -271,10 +274,22 @@ func PathNoExt(in string) string {
 // then name will be the filename minus any extension - including the dot
 // and ext will contain the extension - minus the dot.
 func fileAndExt(in string, b filepathPathBridge) (name string, ext string) {
-	ext = b.Ext(in)
-	base := b.Base(in)
+	normalizeIn := normalizeFilename(in)
+	ext = b.Ext(normalizeIn)
+	base := b.Base(normalizeIn)
 
 	return extractFilename(in, ext, base, b.Separator()), ext
+}
+
+func normalizeFilename(filename string) string {
+	if filename == "" {
+		return ""
+	}
+	if runtime.GOOS == "darwin" {
+		// When a file system is HFS+, its filepath is in NFD form.
+		return norm.NFC.String(filename)
+	}
+	return filename
 }
 
 func extractFilename(in, ext, base, pathSeparator string) (name string) {
